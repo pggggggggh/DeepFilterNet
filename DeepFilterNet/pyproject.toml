@@ -23,8 +23,8 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-deepfilterlib = { path = "../pyDF/" }
-deepfilterdataloader = { path = "../pyDF-data/", optional = true }
+deepfilterlib = { version = "0.5.7" }
+deepfilterdataloader = { version = "0.5.7", optional = true }
 python = ">=3.8,<4.0"
 numpy = ">=1.22,<2.0"
 loguru = ">=0.5"
