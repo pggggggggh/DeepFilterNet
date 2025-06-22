@@ -43,7 +43,7 @@ impl DF {
         py: Python<'py>,
         input: PyReadonlyArray2<'py, f32>,
         reset: Option<bool>,
-    ) -> PyResult<&'py PyArray3<Complex32>> {
+    ) -> PyResult<Bound<'py, PyArray3<Complex32>>> {
         let frame_size = self.state.frame_size;
         let freq_size = self.state.freq_size;
         let channels = input.shape()[0];
@@ -76,7 +76,7 @@ impl DF {
         py: Python<'py>,
         input: PyReadonlyArray3<Complex32>,
         reset: Option<bool>,
-    ) -> PyResult<&'py PyArray2<f32>> {
+    ) -> PyResult<Bound<'py, PyArray2<f32>>> {
         let frame_size = self.state.frame_size;
         let freq_size = self.state.freq_size;
         let channels = input.shape()[0];
@@ -84,7 +84,7 @@ impl DF {
         let out_steps = freq_steps * frame_size;
         let mut output = Array2::<f32>::zeros((channels, out_steps));
 
-        let mut input = unsafe { input.as_array() };
+        let mut input = unsafe { input.as_array_mut() };
         for (mut in_ch, mut out_ch) in
             input.axis_iter_mut(Axis(0)).zip(output.axis_iter_mut(Axis(0)))
         {
@@ -106,12 +106,12 @@ impl DF {
         Ok(output.into_pyarray_bound(py))
     }
 
-    fn erb_widths<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray1<usize>> {
-        Ok(self.state.erb.clone().into_py(py))
+    fn erb_widths<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<usize>>> {
+        Ok(self.state.erb.clone().into_pyarray_bound(py))
     }
 
-    fn fft_window<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray1<f32>> {
-        Ok(self.state.window.clone().into_py(py))
+    fn fft_window<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<f32>>> {
+        Ok(self.state.window.clone().into_pyarray_bound(py))
     }
 
     fn sr(&self) -> usize {
@@ -136,7 +136,7 @@ impl DF {
 }
 
 #[pymodule]
-fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
+fn libdf(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<DF>()?;
 
     #[pyfn(m)]
@@ -146,7 +146,7 @@ fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
         input: PyReadonlyArrayDyn<Complex32>,
         erb_fb: PyReadonlyArray1<usize>,
         db: Option<bool>,
-    ) -> PyResult<&'py PyArrayDyn<f32>> {
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
         // Input shape [B, C, T, F]
         let indim = input.ndim();
         let input = input.as_array();
@@ -197,7 +197,7 @@ fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
         py: Python<'py>,
         input: PyReadonlyArrayDyn<f32>,
         erb_fb: PyReadonlyArray1<usize>,
-    ) -> PyResult<&'py PyArrayDyn<f32>> {
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
         // Input shape [B, C, T, E]
         let indim = input.ndim();
         let input = input.as_array();
@@ -256,7 +256,7 @@ fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
         erb: PyReadonlyArray3<f32>,
         alpha: f32,
         state: Option<PyReadonlyArray2<f32>>,
-    ) -> PyResult<&'py PyArray3<f32>> {
+    ) -> PyResult<Bound<'py, PyArray3<f32>>> {
         // Input shape [C, T, F]
         // State shape [C, F]
         let mut erb = unsafe { erb.as_array_mut() };
@@ -280,7 +280,7 @@ fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
         spec: PyReadonlyArray3<Complex32>,
         alpha: f32,
         state: Option<PyReadonlyArray2<f32>>,
-    ) -> PyResult<&'py PyArray3<Complex32>> {
+    ) -> PyResult<Bound<'py, PyArray3<Complex32>>> {
         // Input shape [C, T, F]
         // State shape [C, F]
         let mut spec = spec.as_array().to_owned();
@@ -299,7 +299,7 @@ fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
 
     #[pyfn(m)]
     #[pyo3(name = "unit_norm_init")]
-    fn unit_norm_init(py: Python, num_freq_bins: usize) -> PyResult<&PyArray2<f32>> {
+    fn unit_norm_init(py: Python, num_freq_bins: usize) -> PyResult<Bound<PyArray2<f32>>> {
         let arr = Array1::<f32>::linspace(UNIT_NORM_INIT[0], UNIT_NORM_INIT[1], num_freq_bins)
             .into_shape([1, num_freq_bins])
             .to_py_err()?;
