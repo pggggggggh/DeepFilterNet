@@ -6,7 +6,7 @@ use df::{Complex32, DFState, UNIT_NORM_INIT};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayD, ArrayView4, Axis, ShapeError};
 use numpy::{
     IntoPyArray, PyArray1, PyArray2, PyArray3, PyArrayDyn, PyReadonlyArray1, PyReadonlyArray2,
-    PyReadonlyArray3, PyReadonlyArrayDyn,
+    PyReadonlyArray3, PyReadonlyArrayDyn, PyUntypedArrayMethods, PyArrayMethods,
 };
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -68,7 +68,7 @@ impl DF {
                 self.state.analysis(ichunk, ochunk)
             }
         }
-        Ok(output.into_pyarray(py))
+        Ok(output.into_pyarray_bound(py))
     }
 
     fn synthesis<'py>(
@@ -84,7 +84,7 @@ impl DF {
         let out_steps = freq_steps * frame_size;
         let mut output = Array2::<f32>::zeros((channels, out_steps));
 
-        let mut input = unsafe { input.as_array_mut() };
+        let mut input = unsafe { input.as_array() };
         for (mut in_ch, mut out_ch) in
             input.axis_iter_mut(Axis(0)).zip(output.axis_iter_mut(Axis(0)))
         {
@@ -103,15 +103,15 @@ impl DF {
                 self.state.synthesis(ichunk, ochunk);
             }
         }
-        Ok(output.into_pyarray(py))
+        Ok(output.into_pyarray_bound(py))
     }
 
     fn erb_widths<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray1<usize>> {
-        Ok(self.state.erb.clone().into_pyarray(py))
+        Ok(self.state.erb.clone().into_py(py))
     }
 
     fn fft_window<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray1<f32>> {
-        Ok(self.state.window.clone().into_pyarray(py))
+        Ok(self.state.window.clone().into_py(py))
     }
 
     fn sr(&self) -> usize {
@@ -136,7 +136,7 @@ impl DF {
 }
 
 #[pymodule]
-fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
+fn libdf(_py: Python, m: &Bound<T>) -> PyResult<()> {
     m.add_class::<DF>()?;
 
     #[pyfn(m)]
@@ -188,7 +188,7 @@ fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
                 .to_py_err()?,
             _ => output.into_dimensionality().to_py_err()?,
         };
-        Ok(output.into_pyarray(py))
+        Ok(output.into_pyarray_bound(py))
     }
 
     #[pyfn(m)]
@@ -246,7 +246,7 @@ fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
                 .to_py_err()?,
             _ => output.into_dimensionality().to_py_err()?,
         };
-        Ok(output.into_pyarray(py))
+        Ok(output.into_pyarray_bound(py))
     }
 
     #[pyfn(m)]
@@ -263,14 +263,14 @@ fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
         if let Some(state) = state {
             transforms::erb_norm(
                 &mut erb.view_mut(),
-                Some(unsafe { state.as_array_mut() }.to_owned()),
+                Some(unsafe { state.as_array() }.to_owned()),
                 alpha,
             )
             .to_py_err()?;
         } else {
             transforms::erb_norm(&mut erb.view_mut(), None, alpha).to_py_err()?;
         };
-        Ok(erb.into_owned().into_pyarray(py))
+        Ok(erb.into_owned().into_pyarray_bound(py))
     }
 
     #[pyfn(m)]
@@ -287,14 +287,14 @@ fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
         if let Some(state) = state {
             transforms::unit_norm(
                 &mut spec.view_mut(),
-                Some(unsafe { state.as_array_mut() }.to_owned()),
+                Some(unsafe { state.as_array() }.to_owned()),
                 alpha,
             )
             .to_py_err()?;
         } else {
             transforms::unit_norm(&mut spec.view_mut(), None, alpha).to_py_err()?;
         };
-        Ok(spec.into_pyarray(py))
+        Ok(spec.into_pyarray_bound(py))
     }
 
     #[pyfn(m)]
@@ -303,7 +303,7 @@ fn libdf(_py: Python, m: &PyModule) -> PyResult<()> {
         let arr = Array1::<f32>::linspace(UNIT_NORM_INIT[0], UNIT_NORM_INIT[1], num_freq_bins)
             .into_shape([1, num_freq_bins])
             .to_py_err()?;
-        Ok(arr.into_pyarray(py))
+        Ok(arr.into_pyarray_bound(py))
     }
 
     Ok(())
