@@ -20,6 +20,7 @@ struct DF {
 #[allow(clippy::upper_case_acronyms)]
 impl DF {
     #[new]
+    #[pyo3(signature = (sr, fft_size, hop_size, nb_bands=None, min_nb_erb_freqs=None))]
     fn new(
         sr: usize,
         fft_size: usize,
@@ -38,6 +39,7 @@ impl DF {
         }
     }
 
+    #[pyo3(signature = (input, reset=None))]
     fn analysis<'py>(
         &mut self,
         py: Python<'py>,
@@ -71,6 +73,7 @@ impl DF {
         Ok(output.into_pyarray(py))
     }
 
+    #[pyo3(signature = (input, reset=None))]
     fn synthesis<'py>(
         &mut self,
         py: Python<'py>,
@@ -141,6 +144,7 @@ fn libdf(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     #[pyfn(m)]
     #[pyo3(name = "erb")]
+    #[pyo3(signature = (input, erb_fb, db=None))]
     fn erb<'py>(
         py: Python<'py>,
         input: PyReadonlyArrayDyn<Complex32>,
@@ -251,6 +255,7 @@ fn libdf(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     #[pyfn(m)]
     #[pyo3(name = "erb_norm")]
+    #[pyo3(signature = (erb, alpha, state=None))]
     fn erb_norm<'py>(
         py: Python<'py>,
         erb: PyReadonlyArray3<f32>,
@@ -275,6 +280,7 @@ fn libdf(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     #[pyfn(m)]
     #[pyo3(name = "unit_norm")]
+    #[pyo3(signature = (spec, alpha, state=None))]
     fn unit_norm<'py>(
         py: Python<'py>,
         spec: PyReadonlyArray3<Complex32>,
